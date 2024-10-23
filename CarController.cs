@@ -96,6 +96,16 @@ public class CarController : MonoBehaviour
     [Range(1f, 10f)]
     private float boostDuration = 3f;
     
+    [Header("Boost Trail")]
+    [SerializeField] [Tooltip("Trail Renderer components for boost effect")]
+    private TrailRenderer[] boostTrails;
+    [SerializeField] [Tooltip("Color of the boost trail")]
+    private Color boostTrailColor = Color.cyan;
+    [SerializeField] [Tooltip("Width of the boost trail")]
+    private float boostTrailWidth = 0.5f;
+    [SerializeField] [Tooltip("How long the trail remains visible")]
+    private float trailTime = 0.5f;
+    
     private bool isBoosting = false;
     private float currentBoostTime = 0f;
     private float originalMaxForwardSpeed;
@@ -159,17 +169,71 @@ public class CarController : MonoBehaviour
 
         originalMaxForwardSpeed = maxForwardSpeed;
         playerInventory = GetComponent<PlayerInventory>();
+
+        // Setup trail renderers if not assigned
+        if (boostTrails == null || boostTrails.Length == 0)
+        {
+            // Look for child objects with TrailRenderer components
+            boostTrails = GetComponentsInChildren<TrailRenderer>();
+            if (boostTrails.Length == 0)
+            {
+                // Create trail objects if none exist
+                CreateBoostTrails();
+            }
+        }
+
+        // Initialize trails
+        SetupTrailRenderers();
+        // Disable trails initially
+        SetTrailsActive(false);
     }
 
-    void Update()
+    private void CreateBoostTrails()
     {
-        IsGrounded = CheckIfGrounded();
+        // Create two trail objects for left and right side of the car
+        boostTrails = new TrailRenderer[2];
+        
+        for (int i = 0; i < 2; i++)
+        {
+            GameObject trailObject = new GameObject($"BoostTrail_{i}");
+            trailObject.transform.parent = transform;
+            
+            // Position trails slightly to the left and right of the car
+            float xOffset = (i == 0) ? -0.5f : 0.5f;
+            trailObject.transform.localPosition = new Vector3(xOffset, 0.1f, -0.5f);
+            
+            boostTrails[i] = trailObject.AddComponent<TrailRenderer>();
+        }
+    }
 
-        // calculate movement amounts
-        DetectMoveInput();
-        DetectTurnInput();
-        DetermineIfMoving();
-		HandleBoost();
+    private void SetupTrailRenderers()
+    {
+        foreach (var trail in boostTrails)
+        {
+            if (trail != null)
+            {
+                trail.time = trailTime;
+                trail.startWidth = boostTrailWidth;
+                trail.endWidth = 0f;
+                trail.startColor = boostTrailColor;
+                trail.endColor = new Color(boostTrailColor.r, boostTrailColor.g, boostTrailColor.b, 0f);
+                trail.material = new Material(Shader.Find("Sprites/Default"));
+                trail.generateLightingData = true;
+                trail.autodestruct = false;
+            }
+        }
+    }
+
+    private void SetTrailsActive(bool active)
+    {
+        foreach (var trail in boostTrails)
+        {
+            if (trail != null)
+            {
+                trail.emitting = active;
+                trail.enabled = active;
+            }
+        }
     }
 
     private void HandleBoost()
@@ -197,12 +261,25 @@ public class CarController : MonoBehaviour
         currentBoostTime = 0f;
         maxForwardSpeed = originalMaxForwardSpeed * boostMultiplier;
         playerInventory.ConsumeBoost();
+        SetTrailsActive(true);
     }
 
     private void DeactivateBoost()
     {
         isBoosting = false;
         maxForwardSpeed = originalMaxForwardSpeed;
+        SetTrailsActive(false);
+    }
+
+    void Update()
+    {
+        IsGrounded = CheckIfGrounded();
+
+        // calculate movement amounts
+        DetectMoveInput();
+        DetectTurnInput();
+        DetermineIfMoving();
+		HandleBoost();
     }
 
     private void FixedUpdate()
