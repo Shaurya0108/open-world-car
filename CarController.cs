@@ -77,6 +77,13 @@ public class CarController : MonoBehaviour
     private Rigidbody rb = null;
     private float groundDetectorRadius = .3f;
     private float wallDetectorRadius = .15f;
+
+    [Header("Air Time Tracking")]
+    [SerializeField]
+    private UIController uiController = null;
+    
+    private float currentAirTime = 0f;
+    private bool wasGroundedLastFrame = true;
     
     void Awake()
     {
@@ -93,6 +100,16 @@ public class CarController : MonoBehaviour
             {
                 Debug.LogWarning("Cannot find wall detector! Make sure you did not" +
                     "delete or rename this object, and reassign on PlayerCar");
+            }
+        }
+
+        // Find UI Controller if not assigned
+        if (uiController == null)
+        {
+            uiController = FindObjectOfType<UIController>();
+            if (uiController == null)
+            {
+                Debug.LogWarning("UIController not found in scene!");
             }
         }
     }
@@ -115,6 +132,26 @@ public class CarController : MonoBehaviour
         // if we're moving into a wall, cut max speed
         if (IsWallColliding)
             LimitSpeedFromWall();
+
+        // Air time tracking
+        if (!IsGrounded)
+        {
+            currentAirTime += Time.deltaTime;
+            if (uiController != null)
+            {
+                uiController.UpdateAirTime(currentAirTime);
+            }
+        }
+        else if (!wasGroundedLastFrame)
+        {
+            // We just landed
+            currentAirTime = 0f;
+            if (uiController != null)
+            {
+                uiController.UpdateAirTime(currentAirTime);
+            }
+        }
+        wasGroundedLastFrame = IsGrounded;
 
         // if we're grounded, build in natural friction
         if (IsGrounded)

@@ -12,6 +12,10 @@ public class UIController : MonoBehaviour
     void Start()
     {
         HideWinText();
+        if (AirTimeCount != null)
+        {
+            UpdateAirTime(0f);
+        }
     }
 
     public void HideWinText()
@@ -28,7 +32,14 @@ public class UIController : MonoBehaviour
 
     public void UpdateCollectibleCount(int collectibleCount)
     {
-        // add animation here
         collectibleTextUI.text = collectibleCount.ToString();
+    }
+
+    public void UpdateAirTime(float airTime)
+    {
+        if (AirTimeCount != null)
+        {
+            AirTimeCount.text = $"Air Time:\n{airTime:F2}s";
+        }
     }
 }
