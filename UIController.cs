@@ -7,6 +7,7 @@ public class UIController : MonoBehaviour
 {
     [SerializeField] Text collectibleTextUI = null;
     [SerializeField] Text winTextUI = null;
+    [SerializeField] Text AirTimeCount = null;
 
     void Start()
     {

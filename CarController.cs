@@ -23,7 +23,6 @@ public class CarController : MonoBehaviour
     [SerializeField] [Tooltip("Time until max speed while moving forward is reached")]
     [Range(0, 3)]
     private float accelTimeToForwardMaxSpeed = 1.5f;
-    
     [Header("Reverse")]
     [SerializeField] [Tooltip("Max reverse speed car can reach")]
     [Range(1, 100)]
