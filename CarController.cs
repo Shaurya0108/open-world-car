@@ -85,6 +85,37 @@ public class CarController : MonoBehaviour
     private float currentAirTime = 0f;
     private bool wasGroundedLastFrame = true;
     
+	private Vector3 startPosition;
+	private Quaternion startRotation;
+
+	void Start()
+	{
+    	// Save the initial position and rotation of the car
+    	startPosition = transform.position;
+    	startRotation = transform.rotation;
+	}
+
+	private void OnTriggerEnter(Collider other)
+	{
+    	if (other.CompareTag("Ground"))
+    	{
+			Debug.Log("Touched ground");
+	        RestartCar();
+    	}
+	}
+
+	private void RestartCar()
+	{
+    	Debug.Log("Restarting car!");
+
+    	// Reset position, rotation, and velocity
+    	transform.position = startPosition;
+    	transform.rotation = startRotation;
+		rb.velocity = Vector3.zero;
+		rb.angularVelocity = Vector3.zero;
+	}
+
+
     void Awake()
     {
         // setup our car defaults
