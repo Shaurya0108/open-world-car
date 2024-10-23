@@ -8,6 +8,28 @@ public class UIController : MonoBehaviour
     [SerializeField] Text collectibleTextUI = null;
     [SerializeField] Text winTextUI = null;
     [SerializeField] Text AirTimeCount = null;
+    
+    [SerializeField] private Text boostMessageUI = null;
+    private float boostMessageDuration = 1.5f;
+
+    public void ShowBoostMessage()
+    {
+        if (boostMessageUI != null)
+        {
+            boostMessageUI.text = "BOOST ACTIVATED!";
+            boostMessageUI.gameObject.SetActive(true);
+            StartCoroutine(HideBoostMessage());
+        }
+    }
+    
+    private IEnumerator HideBoostMessage()
+    {
+        yield return new WaitForSeconds(boostMessageDuration);
+        if (boostMessageUI != null)
+        {
+            boostMessageUI.gameObject.SetActive(false);
+        }
+    }
 
     void Start()
     {

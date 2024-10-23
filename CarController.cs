@@ -88,6 +88,19 @@ public class CarController : MonoBehaviour
 	private Vector3 startPosition;
 	private Quaternion startRotation;
 
+    [Header("Boost")]
+    [SerializeField] [Tooltip("How much faster the car goes when boosting")]
+    [Range(1.2f, 3f)]
+    private float boostMultiplier = 1.5f;
+    [SerializeField] [Tooltip("How long the boost lasts")]
+    [Range(1f, 10f)]
+    private float boostDuration = 3f;
+    
+    private bool isBoosting = false;
+    private float currentBoostTime = 0f;
+    private float originalMaxForwardSpeed;
+    private PlayerInventory playerInventory;
+
 	void Start()
 	{
     	// Save the initial position and rotation of the car
@@ -143,6 +156,9 @@ public class CarController : MonoBehaviour
                 Debug.LogWarning("UIController not found in scene!");
             }
         }
+
+        originalMaxForwardSpeed = maxForwardSpeed;
+        playerInventory = GetComponent<PlayerInventory>();
     }
 
     void Update()
@@ -153,6 +169,40 @@ public class CarController : MonoBehaviour
         DetectMoveInput();
         DetectTurnInput();
         DetermineIfMoving();
+		HandleBoost();
+    }
+
+    private void HandleBoost()
+    {
+        // Check for boost input and if we have enough collectibles
+        if (Input.GetKeyDown(KeyCode.Space) && !isBoosting && playerInventory.CanBoost())
+        {
+            ActivateBoost();
+        }
+
+        // Handle active boost
+        if (isBoosting)
+        {
+            currentBoostTime += Time.deltaTime;
+            if (currentBoostTime >= boostDuration)
+            {
+                DeactivateBoost();
+            }
+        }
+    }
+
+    private void ActivateBoost()
+    {
+        isBoosting = true;
+        currentBoostTime = 0f;
+        maxForwardSpeed = originalMaxForwardSpeed * boostMultiplier;
+        playerInventory.ConsumeBoost();
+    }
+
+    private void DeactivateBoost()
+    {
+        isBoosting = false;
+        maxForwardSpeed = originalMaxForwardSpeed;
     }
 
     private void FixedUpdate()
