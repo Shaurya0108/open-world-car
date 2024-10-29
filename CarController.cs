@@ -30,6 +30,7 @@ public class CarController : MonoBehaviour
     [SerializeField] [Tooltip("Time until max speed while moving reverse is reached")]
     [Range(0, 3)]
     private float accelTimeToReverseMaxSpeed = 1;
+    private float targetSpeed;
 
     [Header("Momentum")]
     [SerializeField] [Tooltip("Time until we lose all speed once input is released")]
@@ -62,6 +63,9 @@ public class CarController : MonoBehaviour
     private const int SPIN_REWARD_AMOUNT = 5;
     private float totalRotation = 0f;
     private float lastGroundRotation = 0f;
+    private float minAirTimeForSpin = 0.2f; // Minimum time needed in air before spins count
+    private float lastGroundTime = 0f; // Track when we last touched ground
+    private bool isFullyAirborne = false; // Track if we're properly in the air
 
 
     [Header("Events")]
@@ -283,7 +287,11 @@ public class CarController : MonoBehaviour
         isBoosting = false;
         maxForwardSpeed = originalMaxForwardSpeed;
         SetTrailsActive(false);
+
+        // Instead of instantly dropping speed, clamp current speed and let it naturally decelerate
+        CurrentSpeed = Mathf.Clamp(CurrentSpeed, -maxReverseSpeed, maxForwardSpeed * boostMultiplier);
     }
+
 
     // Air Spin
     private void RewardSpin()
@@ -340,7 +348,8 @@ public class CarController : MonoBehaviour
 
     private void CheckForAerialSpin()
     {
-        if (!IsGrounded)
+        // Only check for spins if we're fully airborne
+        if (!IsGrounded && isFullyAirborne)
         {
             float currentYRotation = transform.rotation.eulerAngles.y;
             float rotationDelta = Mathf.DeltaAngle(currentRotation, currentYRotation);
@@ -348,7 +357,7 @@ public class CarController : MonoBehaviour
             Debug.Log($"Current Rotation: {currentYRotation}, Delta: {rotationDelta}, Total: {totalRotation}");
 
             // Accumulate the total rotation
-            if (Mathf.Abs(rotationDelta) > 10f) // Minimum threshold to avoid small fluctuations
+            if (Mathf.Abs(rotationDelta) > 10f)
             {
                 totalRotation += Mathf.Abs(rotationDelta);
                 currentRotation = currentYRotation;
@@ -368,11 +377,8 @@ public class CarController : MonoBehaviour
         {
             // Reset everything when we touch the ground
             totalRotation = 0f;
-            // Update the current rotation to match ground slope
             currentRotation = transform.rotation.eulerAngles.y;
             lastGroundRotation = currentRotation;
-
-            Debug.Log($"On ground, current rotation: {currentRotation}");
         }
     }
 
@@ -382,6 +388,8 @@ public class CarController : MonoBehaviour
         GUI.Label(new Rect(10, 10, 300, 20), $"Total Rotation: {totalRotation:F1}");
         GUI.Label(new Rect(10, 30, 300, 20), $"Current Rotation: {currentRotation:F1}");
         GUI.Label(new Rect(10, 50, 300, 20), $"Ground Rotation: {lastGroundRotation:F1}");
+        GUI.Label(new Rect(10, 70, 300, 20), $"Fully Airborne: {isFullyAirborne}");
+        GUI.Label(new Rect(10, 90, 300, 20), $"Air Time: {currentAirTime:F2}");
     }
 
     // Reset combo when landing
@@ -407,6 +415,21 @@ public class CarController : MonoBehaviour
         IsGrounded = CheckIfGrounded();
         IsWallColliding = CheckIfWallColliding();
 
+        // Handle ground/air state
+        if (IsGrounded)
+        {
+            lastGroundTime = Time.time;
+            isFullyAirborne = false;
+        }
+        else
+        {
+            // Check if we've been in the air long enough to be considered fully airborne
+            if (Time.time - lastGroundTime >= minAirTimeForSpin)
+            {
+                isFullyAirborne = true;
+            }
+        }
+
         // if we're moving into a wall, cut max speed
         if (IsWallColliding)
             LimitSpeedFromWall();
@@ -419,8 +442,11 @@ public class CarController : MonoBehaviour
             {
                 uiController.UpdateAirTime(currentAirTime);
             }
-            Debug.Log("IN THE AIR");
-            CheckForAerialSpin();
+
+            if (isFullyAirborne)
+            {
+                CheckForAerialSpin();
+            }
         }
         else if (!wasGroundedLastFrame)
         {
@@ -430,7 +456,7 @@ public class CarController : MonoBehaviour
             {
                 uiController.UpdateAirTime(currentAirTime);
             }
-            ResetSpinCombo(); // Reset combo on landing
+            ResetSpinCombo();
         }
         wasGroundedLastFrame = IsGrounded;
 
@@ -450,6 +476,7 @@ public class CarController : MonoBehaviour
             else if (MoveInput == 0)
                 SlowDown();
             //Debug.Log("CurrentSpeed: " + maxSpeedRatio);
+            totalRotation = 0f; // set total rotation to 0 because the air spin method not working :(
         }
         else
         {
@@ -554,31 +581,34 @@ public class CarController : MonoBehaviour
         if (MoveInput > 0)
         {
             CurrentSpeed += ForwardAccelRatePerSecond * Time.deltaTime;
-            CurrentSpeed = Mathf.Clamp(CurrentSpeed, -maxReverseSpeed, maxForwardSpeed);
+            CurrentSpeed = Mathf.Clamp(CurrentSpeed, -maxReverseSpeed, isBoosting ? maxForwardSpeed : maxForwardSpeed);
         }
         // if we're moving reverse
         else if (MoveInput < 0)
         {
             CurrentSpeed -= ReverseAccelRatePerSecond * Time.deltaTime;
-            CurrentSpeed = Mathf.Clamp(CurrentSpeed, -maxReverseSpeed, maxForwardSpeed);
+            CurrentSpeed = Mathf.Clamp(CurrentSpeed, -maxReverseSpeed, isBoosting ? maxForwardSpeed : maxForwardSpeed);
         }
         else if (MoveInput == 0)
         {
             // if we're slowing from forward movement
-            if (CurrentSpeed > 0)
+            if (CurrentSpeed > maxForwardSpeed) // If we're above normal max speed (post-boost)
+            {
+                CurrentSpeed -= DecelRatePerSecond * Time.deltaTime;
+                CurrentSpeed = Mathf.Clamp(CurrentSpeed, 0, maxForwardSpeed * boostMultiplier);
+            }
+            else if (CurrentSpeed > 0)
             {
                 CurrentSpeed -= DecelRatePerSecond * Time.deltaTime;
                 CurrentSpeed = Mathf.Clamp(CurrentSpeed, 0, maxForwardSpeed);
             }
-            // if we're slowing from backwords movement
+            // if we're slowing from backwards movement
             if (CurrentSpeed < 0)
             {
                 CurrentSpeed += DecelRatePerSecond * Time.deltaTime;
                 CurrentSpeed = Mathf.Clamp(CurrentSpeed, -maxReverseSpeed, 0);
             }
         }
-
-        //Debug.Log("CurrentSpeed: " + currentSpeed);
     }
 
     private void DetectMoveInput()
