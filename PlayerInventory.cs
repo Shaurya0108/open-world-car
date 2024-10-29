@@ -49,14 +49,29 @@ public class PlayerInventory : MonoBehaviour
             Debug.Log($"Used boost! Remaining collectibles: {collectibleCount}");
             UpdateUI();
             uIController.ShowBoostMessage();
+			uIController.ShowMinusFive();  
         }
     }
 
-    private void UpdateUI()
+    public void UpdateUI()
     {
         if (uIController != null)
         {
             uIController.UpdateCollectibleCount(collectibleCount);
         }
+    }
+
+    public void RemoveCollectible()
+    {
+        if (collectibleCount > 0)
+        {
+            collectibleCount--;
+            UpdateUI();
+        }
+    }
+
+    public void UpdateCollectibleUI()
+    {
+        UpdateUI();
     }
 }

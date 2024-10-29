@@ -2,8 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Modify CollectibleTracker.cs
-// Modify CollectibleTracker.cs
 public class CollectibleTracker : MonoBehaviour
 {
     private static int collectedCount = 0;
@@ -22,18 +20,23 @@ public class CollectibleTracker : MonoBehaviour
         this.generator = generator;
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        PlayerInventory playerInventory = other.attachedRigidbody?.GetComponent<PlayerInventory>();
-        if (playerInventory != null)
-        {
-            collectedCount++;
-            playerInventory.AddCollectible(false); // Add false parameter to prevent UI update
-            generator.CollectiblePicked(playerInventory.CollectibleCount); // Pass the actual inventory count
-            PlayFX();
-            Destroy(gameObject);
-        }
-    }
+	// In CollectibleTracker.cs, in the OnTriggerEnter method, add this line:
+	private void OnTriggerEnter(Collider other)
+	{
+    	PlayerInventory playerInventory = other.attachedRigidbody?.GetComponent<PlayerInventory>();
+    	if (playerInventory != null)
+    	{
+        	collectedCount++;
+        	playerInventory.AddCollectible(true);
+        	generator.CollectiblePicked(playerInventory.CollectibleCount);
+        
+        	// Add this line to show the +1 text
+        	FindObjectOfType<UIController>().ShowPlusOne(transform.position);
+        
+        	PlayFX();
+        	Destroy(gameObject);
+    	}
+	}
     
     void PlayFX()
     {

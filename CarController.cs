@@ -50,6 +50,20 @@ public class CarController : MonoBehaviour
         " falls slower")]
     private float gravityMultiplier = 5;
 
+    [Header("Spin Effects")]
+    [SerializeField] private ParticleSystem spinParticlePrefab;
+    [SerializeField] private AudioSource spinSoundPrefab;
+    private int currentSpinCombo = 0;
+    private float comboResetTime = 2.0f;
+    private float lastSpinTime = 0f;
+    private float currentRotation = 0f;
+    private bool spinRewardGiven = false;
+    private const float FULL_SPIN_ANGLE = 360f;
+    private const int SPIN_REWARD_AMOUNT = 5;
+    private float totalRotation = 0f;
+    private float lastGroundRotation = 0f;
+
+
     [Header("Events")]
     [SerializeField]
     public UnityEvent OnDeath;
@@ -271,6 +285,112 @@ public class CarController : MonoBehaviour
         SetTrailsActive(false);
     }
 
+    // Air Spin
+    private void RewardSpin()
+    {
+        if (playerInventory != null)
+        {
+            // Handle combo timing
+            if (Time.time - lastSpinTime <= comboResetTime)
+            {
+                currentSpinCombo++;
+            }
+            else
+            {
+                currentSpinCombo = 1;
+            }
+            lastSpinTime = Time.time;
+
+            // Calculate reward based on combo
+            int totalReward = SPIN_REWARD_AMOUNT * currentSpinCombo;
+
+            // Add collectibles
+            for (int i = 0; i < totalReward; i++)
+            {
+                playerInventory.AddCollectible(false);
+            }
+            playerInventory.UpdateCollectibleUI();
+
+            // Show UI message with combo
+            if (uiController != null)
+            {
+                string comboText = currentSpinCombo > 1 ? $" x{currentSpinCombo} COMBO!" : " BONUS!";
+                uiController.ShowSpinReward($"+{totalReward} SPIN{comboText}");
+            }
+
+            // Spawn particles
+            if (spinParticlePrefab != null)
+            {
+                ParticleSystem newParticle = Instantiate(spinParticlePrefab,
+                    transform.position,
+                    Quaternion.identity);
+                newParticle.Play();
+                // Optional: Destroy particle system after it finishes
+                float duration = newParticle.main.duration;
+                Destroy(newParticle.gameObject, duration);
+            }
+
+            // Play sound
+            if (spinSoundPrefab != null)
+            {
+                AudioSource.PlayClipAtPoint(spinSoundPrefab.clip, transform.position);
+            }
+        }
+    }
+
+    private void CheckForAerialSpin()
+    {
+        if (!IsGrounded)
+        {
+            float currentYRotation = transform.rotation.eulerAngles.y;
+            float rotationDelta = Mathf.DeltaAngle(currentRotation, currentYRotation);
+
+            Debug.Log($"Current Rotation: {currentYRotation}, Delta: {rotationDelta}, Total: {totalRotation}");
+
+            // Accumulate the total rotation
+            if (Mathf.Abs(rotationDelta) > 10f) // Minimum threshold to avoid small fluctuations
+            {
+                totalRotation += Mathf.Abs(rotationDelta);
+                currentRotation = currentYRotation;
+
+                Debug.Log($"Accumulated rotation: {totalRotation}");
+
+                // Check if we've completed a full spin
+                if (totalRotation >= FULL_SPIN_ANGLE)
+                {
+                    Debug.Log("Air Spin COMPLETE!");
+                    RewardSpin();
+                    totalRotation -= FULL_SPIN_ANGLE;
+                }
+            }
+        }
+        else
+        {
+            // Reset everything when we touch the ground
+            totalRotation = 0f;
+            // Update the current rotation to match ground slope
+            currentRotation = transform.rotation.eulerAngles.y;
+            lastGroundRotation = currentRotation;
+
+            Debug.Log($"On ground, current rotation: {currentRotation}");
+        }
+    }
+
+    // Help debug the rotation values
+    private void OnGUI()
+    {
+        GUI.Label(new Rect(10, 10, 300, 20), $"Total Rotation: {totalRotation:F1}");
+        GUI.Label(new Rect(10, 30, 300, 20), $"Current Rotation: {currentRotation:F1}");
+        GUI.Label(new Rect(10, 50, 300, 20), $"Ground Rotation: {lastGroundRotation:F1}");
+    }
+
+    // Reset combo when landing
+    private void ResetSpinCombo()
+    {
+        currentSpinCombo = 0;
+        lastSpinTime = 0f;
+    }
+
     void Update()
     {
         IsGrounded = CheckIfGrounded();
@@ -299,6 +419,8 @@ public class CarController : MonoBehaviour
             {
                 uiController.UpdateAirTime(currentAirTime);
             }
+            Debug.Log("IN THE AIR");
+            CheckForAerialSpin();
         }
         else if (!wasGroundedLastFrame)
         {
@@ -308,6 +430,7 @@ public class CarController : MonoBehaviour
             {
                 uiController.UpdateAirTime(currentAirTime);
             }
+            ResetSpinCombo(); // Reset combo on landing
         }
         wasGroundedLastFrame = IsGrounded;
 
@@ -345,7 +468,27 @@ public class CarController : MonoBehaviour
 
     public void Die()
     {
-        //Debug.Log("Die!");
+        // Get reference to PlayerInventory
+        PlayerInventory inventory = GetComponent<PlayerInventory>();
+        UIController uiController = FindObjectOfType<UIController>();
+
+        if (inventory != null)
+        {
+            // Deduct 10 collectibles if possible
+            for (int i = 0; i < 10; i++)
+            {
+                if (inventory.CollectibleCount > 0)
+                {
+                    inventory.RemoveCollectible();  // We'll create this new method
+                }
+            }
+        }
+
+        if (uiController != null)
+        {
+            uiController.ShowMinusTen();
+        }
+
         // trigger death event so observers and FX can respond
         OnDeath.Invoke();
         // optionally, you could delay destroying this object

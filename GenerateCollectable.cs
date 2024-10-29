@@ -29,7 +29,7 @@ public class GenerateCollectable : MonoBehaviour
             float terrainHeight = terrain.SampleHeight(new Vector3(randomX, 0, randomZ))
                                   + terrainPosition.y;
 
-            Vector3 spawnPosition = new Vector3(randomX, terrainHeight, randomZ);
+            Vector3 spawnPosition = new Vector3(randomX, terrainHeight + 1, randomZ);
 
             // Instantiate collectible and assign callback to increment the collectible count.
             GameObject collectible = Instantiate(collectiblePrefab, spawnPosition, Quaternion.identity);
@@ -40,7 +40,6 @@ public class GenerateCollectable : MonoBehaviour
     // Method to notify the UIController when a collectible is picked up.
     public void CollectiblePicked(int collectedCount)
     {
-        uiController.UpdateCollectibleCount(collectedCount);
 
         if (collectedCount >= numberOfCollectibles)
         {
