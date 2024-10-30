@@ -15,7 +15,14 @@ public class WinVolume : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        other.gameObject.SetActive(false);
+        //other.gameObject.SetActive(false);
+
+        CarController car = other.attachedRigidbody.gameObject.GetComponent<CarController>();
+
+        if (car != null)
+        {
+            car.Win();
+        }
 
         if (UIController != null) {
             UIController.ShowWinText(winText);

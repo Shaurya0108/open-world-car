@@ -14,9 +14,13 @@ public class CarFX : MonoBehaviour
     [SerializeField]
     private ParticleSystem deathParticlePrefab = null;
 
+    [SerializeField]
+    private ParticleSystem winParticlePrefab = null;
+
     [Header("Audio")]
     [SerializeField]
     private AudioSource deathSoundPrefab = null;
+    private AudioSource winSoundPrefab = null;
 
     private Animator animator;
 
@@ -28,8 +32,11 @@ public class CarFX : MonoBehaviour
         carController = GetComponent<CarController>();
         animator = GetComponent<Animator>();
         // add FX to the Death event
-        carController.OnDeath.AddListener(PlayVFX);
-        carController.OnDeath.AddListener(PlaySFX);
+        carController.OnDeath.AddListener(PlayDeathVFX);
+        carController.OnDeath.AddListener(PlayDeathSFX);
+
+        carController.OnWin.AddListener(PlayWinVFX);
+        carController.OnWin.AddListener(PlayWinSFX);
     }
 
     private void OnEnable()
@@ -99,7 +106,7 @@ public class CarFX : MonoBehaviour
         animator.SetBool(moveParameterName, false);
     }
 
-    private void PlayVFX()
+    private void PlayDeathVFX()
     {
         // spawn death particle
         if (deathParticlePrefab != null)
@@ -111,8 +118,25 @@ public class CarFX : MonoBehaviour
         }
     }
 
-    private void PlaySFX()
+    private void PlayWinVFX()
+    {
+        // spawn win particle
+        if (winParticlePrefab != null)
+        {
+            // spawn particle object
+            ParticleSystem winParticle = Instantiate(winParticlePrefab,
+                transform.position, Quaternion.identity);
+            winParticle.Play();
+        }
+    }
+
+    private void PlayDeathSFX()
     {
         SoundPlayer.Instance.PlaySFX(deathSoundPrefab, transform.position);
+    }
+
+    private void PlayWinSFX()
+    {
+        SoundPlayer.Instance.PlaySFX(winSoundPrefab, transform.position);
     }
 }

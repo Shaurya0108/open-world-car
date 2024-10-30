@@ -71,6 +71,7 @@ public class CarController : MonoBehaviour
     [Header("Events")]
     [SerializeField]
     public UnityEvent OnDeath;
+    public UnityEvent OnWin;
 
     [SerializeField]
     private Transform wallDetector;
@@ -506,7 +507,7 @@ public class CarController : MonoBehaviour
             {
                 if (inventory.CollectibleCount > 0)
                 {
-                    inventory.RemoveCollectible();  // We'll create this new method
+                    inventory.RemoveCollectible();
                 }
             }
         }
@@ -518,8 +519,27 @@ public class CarController : MonoBehaviour
 
         // trigger death event so observers and FX can respond
         OnDeath.Invoke();
-        // optionally, you could delay destroying this object
-        // to play death animation
+        Destroy(gameObject);
+    }
+
+    public void Win()
+    {
+        // Get reference to PlayerInventory
+        PlayerInventory inventory = GetComponent<PlayerInventory>();
+
+        if (inventory != null)
+        {
+            // Deduct 10 collectibles if possible
+            for (int i = 0; i < 10; i++)
+            {
+                if (inventory.CollectibleCount > 0)
+                {
+                    inventory.RemoveCollectible();
+                }
+            }
+        }
+
+        OnWin.Invoke();
         Destroy(gameObject);
     }
 
