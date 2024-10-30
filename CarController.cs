@@ -71,7 +71,13 @@ public class CarController : MonoBehaviour
     [Header("Events")]
     [SerializeField]
     public UnityEvent OnDeath;
+    [SerializeField]
     public UnityEvent OnWin;
+    [SerializeField]
+    public UnityEvent OnHit;
+
+    private bool isRespawning = false;
+    private float respawnDelay = 2f;
 
     [SerializeField]
     private Transform wallDetector;
@@ -142,21 +148,81 @@ public class CarController : MonoBehaviour
     	if (other.CompareTag("Ground"))
     	{
 			Debug.Log("Touched ground");
-	        RestartCar();
+            RestartCarAfterCrash();
     	}
 	}
 
-	private void RestartCar()
-	{
-    	Debug.Log("Restarting car!");
+    public void RestartCarAfterCrash()
+    {
+        Debug.Log("Restarting car after crash!");
 
-    	// Reset position, rotation, and velocity
-    	transform.position = startPosition;
-    	transform.rotation = startRotation;
-		rb.velocity = Vector3.zero;
-		rb.angularVelocity = Vector3.zero;
-	}
+        // Reset position, rotation, and velocity
+        transform.position = startPosition;
+        transform.rotation = startRotation;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
 
+    public void RestartCarAfterHit()
+    {
+        if (!isRespawning)
+        {
+            Debug.Log("Frank got you! Respawning in " + respawnDelay + " seconds");
+            OnHit.Invoke();
+            isRespawning = true;
+
+            // Disable movement while waiting to respawn
+            rb.isKinematic = true;
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // Start the respawn coroutine
+            StartCoroutine(RespawnAfterDelay());
+        }
+    }
+
+    // Respawn coroutine
+    private IEnumerator RespawnAfterDelay()
+    {
+        yield return new WaitForSeconds(respawnDelay);
+
+        // Reset position and physics
+        transform.position = startPosition;
+        transform.rotation = startRotation;
+        rb.isKinematic = false;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        isRespawning = false;
+    }
+
+    public void Die()
+    {
+        // Get reference to PlayerInventory
+        PlayerInventory inventory = GetComponent<PlayerInventory>();
+        UIController uiController = FindObjectOfType<UIController>();
+
+        if (inventory != null)
+        {
+            // Deduct 10 collectibles if possible
+            for (int i = 0; i < 10; i++)
+            {
+                if (inventory.CollectibleCount > 0)
+                {
+                    inventory.RemoveCollectible();
+                }
+            }
+        }
+
+        if (uiController != null)
+        {
+            uiController.ShowMinusTen();
+        }
+
+        // trigger death event so observers and FX can respond
+        OnDeath.Invoke();
+        Destroy(gameObject);
+    }
 
     void Awake()
     {
@@ -402,17 +468,18 @@ public class CarController : MonoBehaviour
 
     void Update()
     {
-        IsGrounded = CheckIfGrounded();
+        if (isRespawning) return; // Skip movement input if respawning
 
-        // calculate movement amounts
+        IsGrounded = CheckIfGrounded();
         DetectMoveInput();
         DetectTurnInput();
         DetermineIfMoving();
-		HandleBoost();
+        HandleBoost();
     }
 
     private void FixedUpdate()
     {
+        if (isRespawning) return; // Skip physics updates if respawning
         IsGrounded = CheckIfGrounded();
         IsWallColliding = CheckIfWallColliding();
 
@@ -492,34 +559,6 @@ public class CarController : MonoBehaviour
         {
             Turn();
         }
-    }
-
-    public void Die()
-    {
-        // Get reference to PlayerInventory
-        PlayerInventory inventory = GetComponent<PlayerInventory>();
-        UIController uiController = FindObjectOfType<UIController>();
-
-        if (inventory != null)
-        {
-            // Deduct 10 collectibles if possible
-            for (int i = 0; i < 10; i++)
-            {
-                if (inventory.CollectibleCount > 0)
-                {
-                    inventory.RemoveCollectible();
-                }
-            }
-        }
-
-        if (uiController != null)
-        {
-            uiController.ShowMinusTen();
-        }
-
-        // trigger death event so observers and FX can respond
-        OnDeath.Invoke();
-        Destroy(gameObject);
     }
 
     public void Win()

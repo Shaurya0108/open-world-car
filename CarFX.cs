@@ -34,6 +34,8 @@ public class CarFX : MonoBehaviour
         // add FX to the Death event
         carController.OnDeath.AddListener(PlayDeathVFX);
         carController.OnDeath.AddListener(PlayDeathSFX);
+        carController.OnHit.AddListener(PlayDeathVFX);
+        carController.OnHit.AddListener(PlayDeathSFX);
 
         carController.OnWin.AddListener(PlayWinVFX);
         carController.OnWin.AddListener(PlayWinSFX);
