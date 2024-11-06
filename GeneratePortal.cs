@@ -9,14 +9,44 @@ public class GeneratePortal : MonoBehaviour
     [SerializeField] private int numberOfPortals = 5;
     [SerializeField] private Terrain terrain;
     [SerializeField] private float minDistanceBetweenPortals = 5f;
-    [SerializeField] private float hitboxScale = 2f; // How much larger the hitbox should be
+    [SerializeField] private float triggerThickness = 1f;
+    [SerializeField] private GameObject portalCollectEffect;
     private UIController uiController;
     private List<Vector3> spawnedPositions = new List<Vector3>();
+    private bool portalsGenerated = false;
+    private const int COLLECTIBLES_NEEDED = 10;
 
     void Start()
     {
         uiController = FindObjectOfType<UIController>();
-        GeneratePortals();
+        // Find and subscribe to the player's inventory
+        PlayerInventory playerInventory = FindObjectOfType<PlayerInventory>();
+        if (playerInventory != null)
+        {
+            StartCoroutine(CheckCollectibles(playerInventory));
+        }
+        else
+        {
+            Debug.LogError("PlayerInventory not found in the scene!");
+        }
+    }
+
+    private IEnumerator CheckCollectibles(PlayerInventory playerInventory)
+    {
+        while (!portalsGenerated)
+        {
+            if (playerInventory.CollectibleCount >= COLLECTIBLES_NEEDED)
+            {
+                GeneratePortals();
+                portalsGenerated = true;
+                if (uiController != null)
+                {
+                    uiController.ShowMessage("Portals have appeared!");
+                }
+                yield break;
+            }
+            yield return new WaitForSeconds(0.5f); // Check every half second
+        }
     }
 
     void GeneratePortals()
@@ -54,9 +84,6 @@ public class GeneratePortal : MonoBehaviour
             {
                 GameObject portal = Instantiate(portalPrefab, spawnPosition, Quaternion.identity);
 
-                // Create larger hitbox
-                CreateEnhancedHitbox(portal);
-
                 RaycastHit hit;
                 if (Physics.Raycast(spawnPosition + Vector3.up * 10f, Vector3.down, out hit))
                 {
@@ -74,44 +101,6 @@ public class GeneratePortal : MonoBehaviour
         }
     }
 
-    void CreateEnhancedHitbox(GameObject portal)
-    {
-        // Method 1: Create a new, larger trigger collider
-        GameObject hitboxObject = new GameObject("PortalHitbox");
-        hitboxObject.transform.SetParent(portal.transform);
-        hitboxObject.transform.localPosition = Vector3.zero;
-        hitboxObject.transform.localRotation = Quaternion.identity;
-
-        // Add a box collider that's larger than the portal
-        BoxCollider hitboxCollider = hitboxObject.AddComponent<BoxCollider>();
-        BoxCollider originalCollider = portal.GetComponent<BoxCollider>();
-
-        if (originalCollider != null)
-        {
-            // Copy the original collider's size and scale it up
-            hitboxCollider.size = originalCollider.size * hitboxScale;
-            hitboxCollider.center = originalCollider.center;
-            hitboxCollider.isTrigger = true;
-
-            // Optionally disable the original collider
-            // originalCollider.enabled = false;
-        }
-        else
-        {
-            // If there's no original collider, create a new one based on the renderer
-            Renderer renderer = portal.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                hitboxCollider.size = renderer.bounds.size * hitboxScale;
-                hitboxCollider.isTrigger = true;
-            }
-        }
-
-        // Add a script to handle collisions if you don't already have one
-        PortalTrigger triggerScript = hitboxObject.AddComponent<PortalTrigger>();
-        triggerScript.parentPortal = portal;
-    }
-
     bool IsTooCloseToOtherPortals(Vector3 position)
     {
         foreach (Vector3 spawnedPosition in spawnedPositions)
@@ -122,42 +111,5 @@ public class GeneratePortal : MonoBehaviour
             }
         }
         return false;
-    }
-
-    public void CollectiblePicked(int collectedCount)
-    {
-        if (collectedCount >= 1)
-        {
-            uiController.ShowWinText("You got to the portal");
-        }
-    }
-
-    void OnDrawGizmos()
-    {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireCube(transform.position, GetComponent<BoxCollider>().size);
-    }
-}
-
-// Add this new class to handle the portal trigger
-public class PortalTrigger : MonoBehaviour
-{
-    public GameObject parentPortal { get; set; }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        // Check if the colliding object is the player
-        if (other.CompareTag("Player"))
-        {
-            // Get the GeneratePortal script and notify it
-            GeneratePortal portalGenerator = FindObjectOfType<GeneratePortal>();
-            if (portalGenerator != null)
-            {
-                portalGenerator.CollectiblePicked(1);
-            }
-
-            // Optionally destroy the portal
-            Destroy(parentPortal);
-        }
     }
 }

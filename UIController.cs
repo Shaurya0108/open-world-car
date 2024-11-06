@@ -21,6 +21,8 @@ public class UIController : MonoBehaviour
     [SerializeField] private float minusDisplayDuration = 1.5f;
     [SerializeField] private float spinRewardDisplayDuration = 1.5f;
 
+    [SerializeField] private Text portalMessageUI = null;
+
     public void ShowBoostMessage()
     {
         if (boostMessageUI != null)
@@ -139,6 +141,25 @@ public class UIController : MonoBehaviour
         if (spinRewardTextUI != null)
         {
             spinRewardTextUI.gameObject.SetActive(false);
+        }
+    }
+
+    public void ShowMessage(string message)
+    {
+        if (portalMessageUI != null)
+        {
+            portalMessageUI.text = message;
+            portalMessageUI.gameObject.SetActive(true);
+            StartCoroutine(HidePortalMessage());
+        }
+    }
+
+    private IEnumerator HidePortalMessage()
+    {
+        yield return new WaitForSeconds(2f);
+        if (portalMessageUI != null)
+        {
+            portalMessageUI.gameObject.SetActive(false);
         }
     }
 }
