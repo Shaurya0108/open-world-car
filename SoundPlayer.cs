@@ -22,16 +22,23 @@ public class SoundPlayer : MonoBehaviour
 
     public void PlaySFX(AudioSource soundPrefab, Vector3 spawnLocation)
     {
-        if (soundPrefab != null
-            && soundPrefab.clip != null)
+        if (soundPrefab == null)
         {
-            // spawn sound object
-            AudioSource audioSource = Instantiate
-                (soundPrefab, spawnLocation, Quaternion.identity);
-            // play the sound
-            audioSource.Play();
-            // destroy it when the sound is complete
-            Destroy(audioSource.gameObject, audioSource.clip.length);
+            Debug.LogWarning("Sound prefab is null!");
+            return;
         }
+
+        if (soundPrefab.clip == null)
+        {
+            Debug.LogWarning("Sound prefab has no audio clip assigned!");
+            return;
+        }
+
+        // spawn sound object
+        AudioSource audioSource = Instantiate(soundPrefab, spawnLocation, Quaternion.identity);
+        // play the sound
+        audioSource.Play();
+        // destroy it when the sound is complete
+        Destroy(audioSource.gameObject, audioSource.clip.length);
     }
 }

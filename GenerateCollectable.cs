@@ -21,19 +21,27 @@ public class GenerateCollectable : MonoBehaviour
     {
         Vector3 terrainPosition = terrain.transform.position;
         Vector3 terrainSize = terrain.terrainData.size;
-
         for (int i = 0; i < numberOfCollectibles; i++)
         {
             float randomX = Random.Range(terrainPosition.x, terrainPosition.x + terrainSize.x);
             float randomZ = Random.Range(terrainPosition.z, terrainPosition.z + terrainSize.z);
             float terrainHeight = terrain.SampleHeight(new Vector3(randomX, 0, randomZ))
                                   + terrainPosition.y;
-
             Vector3 spawnPosition = new Vector3(randomX, terrainHeight + 1, randomZ);
 
-            // Instantiate collectible and assign callback to increment the collectible count.
-            GameObject collectible = Instantiate(collectiblePrefab, spawnPosition, Quaternion.identity);
-            collectible.AddComponent<CollectibleTracker>().Initialize(this);
+            // Create the collectible
+            GameObject collectibleObj = Instantiate(collectiblePrefab, spawnPosition, Quaternion.identity);
+
+            // Get the Collectible component and initialize it
+            Collectible collectible = collectibleObj.GetComponent<Collectible>();
+            if (collectible != null)
+            {
+                collectible.Initialize(this);
+            }
+            else
+            {
+                Debug.LogError("Collectible component not found on instantiated prefab!");
+            }
         }
     }
 

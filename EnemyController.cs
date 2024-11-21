@@ -4,8 +4,8 @@ using System.Collections;
 public class EnemyController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float baseSpeed = 5f;
-    [SerializeField] private float maxSpeed = 15f;
+    [SerializeField] private float baseSpeed = 10f;
+    [SerializeField] private float maxSpeed = 20f;
     [SerializeField] private float rotationSpeed = 3f;
     [SerializeField] private float speedIncreasePerCollectible = 0.1f;
 
