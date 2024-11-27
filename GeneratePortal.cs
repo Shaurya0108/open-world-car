@@ -13,17 +13,17 @@ public class GeneratePortal : MonoBehaviour
     [SerializeField] private GameObject portalCollectEffect;
     private UIController uiController;
     private List<Vector3> spawnedPositions = new List<Vector3>();
-    private bool portalsGenerated = false;
+    private List<GameObject> activePortals = new List<GameObject>();
     private const int COLLECTIBLES_NEEDED = 10;
+    private bool previouslyMetThreshold = false;
 
     void Start()
     {
         uiController = FindObjectOfType<UIController>();
-        // Find and subscribe to the player's inventory
         PlayerInventory playerInventory = FindObjectOfType<PlayerInventory>();
         if (playerInventory != null)
         {
-            StartCoroutine(CheckCollectibles(playerInventory));
+            StartCoroutine(MonitorCollectibles(playerInventory));
         }
         else
         {
@@ -31,22 +31,48 @@ public class GeneratePortal : MonoBehaviour
         }
     }
 
-    private IEnumerator CheckCollectibles(PlayerInventory playerInventory)
+    private IEnumerator MonitorCollectibles(PlayerInventory playerInventory)
     {
-        while (!portalsGenerated)
+        while (true)
         {
-            if (playerInventory.CollectibleCount >= COLLECTIBLES_NEEDED)
+            bool meetsThreshold = playerInventory.CollectibleCount >= COLLECTIBLES_NEEDED;
+
+            // Portal spawning condition
+            if (meetsThreshold && !previouslyMetThreshold)
             {
                 GeneratePortals();
-                portalsGenerated = true;
                 if (uiController != null)
                 {
                     uiController.ShowMessage("Portals have appeared!");
                 }
-                yield break;
             }
+            // Portal despawning condition
+            else if (!meetsThreshold && previouslyMetThreshold)
+            {
+                DespawnPortals();
+                if (uiController != null)
+                {
+                    uiController.ShowMessage("Portals have disappeared!");
+                }
+            }
+
+            previouslyMetThreshold = meetsThreshold;
             yield return new WaitForSeconds(0.5f); // Check every half second
         }
+    }
+
+    private void DespawnPortals()
+    {
+        foreach (GameObject portal in activePortals)
+        {
+            if (portal != null)
+            {
+                // Optional: Add despawn effect here
+                Destroy(portal);
+            }
+        }
+        activePortals.Clear();
+        spawnedPositions.Clear();
     }
 
     void GeneratePortals()
@@ -97,6 +123,7 @@ public class GeneratePortal : MonoBehaviour
                 portal.transform.position += Vector3.up * (portalHeight / 2f);
 
                 spawnedPositions.Add(spawnPosition);
+                activePortals.Add(portal);
             }
         }
     }
